@@ -1,5 +1,9 @@
 module SpatialAccessTrees
 
-# Write your package code here.
+using SimilaritySearch
+import SimilaritySearch: search, index!, evaluate, getpools, getknnresult, database, distance
+
+include("sat.jl")
 
 end
+ 
