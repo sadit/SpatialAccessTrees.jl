@@ -7,13 +7,41 @@ struct RandomSortSat <: AbstractSortSat end
 struct ProximalSortSat <: AbstractSortSat end
 struct DistalSortSat <: AbstractSortSat end
 
+"""
+    struct Sat{DT<:SemiMetric,DBT<:AbstractDatabase} <: AbstractSearchIndex
+        dist::DT
+        db::DBT
+        root::UInt32
+        prunning_factor::Float32
+        parents::Vector{UInt32}
+        children::Vector{Union{Nothing,Vector{UInt32}}}
+        cov::Vector{Float32} # leafs: d(parent, leaf), internal: max {d(parent, u) | u \in children(parent)}
+    end
+
+Spatial Access Tree data structure. Please see `Sat` function for high level constructors
+"""
 struct Sat{DT<:SemiMetric,DBT<:AbstractDatabase} <: AbstractSearchIndex
     dist::DT
     db::DBT
     root::UInt32
+    prunning_factor::Float32
     parents::Vector{UInt32}
     children::Vector{Union{Nothing,Vector{UInt32}}}
     cov::Vector{Float32} # leafs: d(parent, leaf), internal: max {d(parent, u) | u \in children(parent)}
+end
+
+function Sat(
+        sat::Sat;
+        dist=sat.dist,
+        db=sat.db,
+        root=sat.root,
+        prunning_factor=sat.prunning_factor,
+        parents=sat.parents,
+        children=sat.children,
+        cov=sat.cov
+    )
+
+    Sat(dist, db, convert(UInt32, root), convert(Float32, prunning_factor), parents, children, cov)
 end
 
 """
@@ -28,14 +56,14 @@ Prepares the metric data structure. After calling this constructor, please call 
 # Keyword arguments
 - `dist`: distance function, defaults to L2Distance()
 - `root`: The dataset's element to be used as root
-
+- `prunning_factor`: factor for aggressive prunning candidates, valid range: ``0 < prunning_factor \\leq 1``, an exact search is made when `prunning_factor=1`.
 """
-function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1)
+function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1, prunning_factor=1f0)
     n = length(db)
     P = zeros(UInt32, n)
     C = Union{Nothing,Vector{UInt32}}[nothing for _ in 1:n]
     cov = Vector{Float32}(undef, n)
-    Sat(dist, db, convert(UInt32, root), P, C, cov)
+    Sat(dist, db, convert(UInt32, root), convert(Float32, prunning_factor), P, C, cov)
 end
 
 @inline getpools(::Sat) = nothing
@@ -125,11 +153,18 @@ function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::Abstra
     dist = distance(sat)
 
     # computing distance to its parent (stored in D)
-    sat.cov[p] = -Inf32
-    for (i, c) in enumerate(sat.children[p])
+    sat.cov[p] = 0f0
+    C = sat.children[p]
+    #L = Threads.SpinLock()
+
+    #Threads.@threads
+    for i in eachindex(C) #(i, c) in enumerate()
+        c = C[i]
         d = evaluate(dist, parent, database(sat, c))
         D[i] = (convert(Float32, d), c)
+        #lock(L) do
         sat.cov[p] = max(sat.cov[p], d) # covering radius
+        #end
     end
 
     T = typeof(sortsat)
@@ -140,7 +175,7 @@ function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::Abstra
     end
 
     # computing nearest neighbors of $child \in D$ (using previous D and storing the new set on D)
-    empty!(sat.children[p])
+    empty!(C)
     #push!(C, last(D[1]))
 
     for (d_, i_) in D
@@ -148,7 +183,7 @@ function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::Abstra
         push!(res, p, d_)
         child = database(sat, i_)
 
-        for j in sat.children[p]
+        for j in C
             d = evaluate(dist, child, database(sat, j))
             push!(res, j, d)
         end
@@ -166,46 +201,20 @@ function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::Abstra
     end
 end
 
+#=
 isleaf(sat::Sat, i::Integer) = sat.cov[i] < 0
 isinner(sat::Sat, i::Integer) = sat.cov[i] >= 0
 isroot(sat::Sat, i::Integer) = sat.root == i
-
-#=
-function searchtree(sat::Sat, q, p::Integer, res::KnnResult)
-    cost = 0
-    r = sat.cov[p]
-
-    if r >= 0  # inner node
-        d = evaluate(distance(sat), q, database(sat, p))
-        cost += 1
-        push!(res, p, d)
-
-        #if length(res) <= maxlength(res) #|| d < maximum(res) + r
-            for c in sat.children[p]
-                cost += searchtree(sat, q, c, res)
-            end
-        #end
-    else
-        #r = abs(r)
-        #parent_ = sat.parents[p]
-        #parentcov = convert(Float32, parent_ == 0 ? 0f0 : sat.cov[parent_])
-        #if length(res) < maxlength(res) || r < parentcov + maximum(res)
-            d = evaluate(distance(sat), q, database(sat, p))
-            cost += 1
-            push!(res, p, d)
-        #end
-    end
-
-    cost
-end
 =#
+
 function searchtree(sat::Sat, q, p::Integer, res::KnnResult)
     cost = 1
-    d = evaluate(distance(sat), q, database(sat, p))
-    push!(res, p, d)
+    dist = distance(sat)
+    dqp = evaluate(dist, q, database(sat, p))
+    push!(res, p, dqp)
 
     if sat.children[p] !== nothing # inner node
-        if length(res) < maxlength(res) || d < maximum(res) + sat.cov[p]
+        if length(res) < maxlength(res) || dqp < sat.prunning_factor * maximum(res) + sat.cov[p]
             for c in sat.children[p]
                 cost += searchtree(sat, q, c, res)
             end
@@ -219,3 +228,4 @@ function search(sat::Sat, q::T, res::KnnResult; pools=nothing) where T
     cost = searchtree(sat, q, sat.root, res)
     (; res, cost)
 end
+
