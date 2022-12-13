@@ -16,6 +16,20 @@ struct Sat{DT<:SemiMetric,DBT<:AbstractDatabase} <: AbstractSearchIndex
     cov::Vector{Float32} # leafs: d(parent, leaf), internal: max {d(parent, u) | u \in children(parent)}
 end
 
+"""
+    Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1)
+
+Prepares the metric data structure. After calling this constructor, please call `index!`.
+
+# Arguments
+
+- `db`: database to index
+
+# Keyword arguments
+- `dist`: distance function, defaults to L2Distance()
+- `root`: The dataset's element to be used as root
+
+"""
 function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1)
     n = length(db)
     P = zeros(UInt32, n)
@@ -30,7 +44,31 @@ end
 @inline distance(sat::Sat) = sat.dist
 @inline Base.length(sat::Sat) = length(sat.cov)
 
-function index!(sat::Sat; sortsat::AbstractSortSat=ProximalSortSat(), minleaf::Int=log2(ceil(database(sat))), randomize=false)
+"""
+    index!(
+        sat::Sat;
+        sortsat::AbstractSortSat=ProximalSortSat(),
+        minleaf::Int=log2(ceil(database(sat)))
+    )
+
+Performs the indexing of the referenced dataset in the spatial access tree.
+
+# Arguments
+- `sat`: The metric data structure
+
+# Keyword arguments
+- `sortsat`: The strategy to create the spatial access tree, it heavily depends on the order of elements while it is build. It accepts:
+   - `RandomSortSat()`: children are randomized.
+   - `ProximalSortSat()`: classical approach, near elements are put first.
+   - `DistalSortSat()`: recent approach, distant elements are put first.
+- `minleaf`: Minimum number of children to perform a spatial access separation (half space partitioning)
+"""
+function index!(
+        sat::Sat;
+        sortsat::AbstractSortSat=ProximalSortSat(),
+        minleaf::Int=log2(ceil(database(sat))),
+        randomize=false
+    )
     n = length(sat)
     D = Vector{Tuple{Float32,UInt32}}(undef, n)
     p::UInt32 = sat.root
