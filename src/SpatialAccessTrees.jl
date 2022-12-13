@@ -1,6 +1,6 @@
 module SpatialAccessTrees
 
-using SimilaritySearch
+using SimilaritySearch, Random
 import SimilaritySearch: search, index!, evaluate, getpools, getknnresult, database, distance
 
 include("sat.jl")
