@@ -27,7 +27,7 @@ using Test
         recall = macrorecall(Igold, Isat)
         @test recall >= 0.9999
 
-        asat = Sat(sat; prunning_factor=0.75)
+        asat = Sat(sat; pruning_factor=0.75)
         asearchtime = @elapsed Iasat, Dasat = searchbatch(asat, queries, k)
         arecall = macrorecall(Igold, Iasat)
 

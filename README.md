@@ -14,6 +14,12 @@ and
 Chávez, E., Luduena, V., Reyes, N., & Roggero, P. (2016). Faster proximity searching with the distal SAT. Information Systems, 59, 15-47.
 ```
 
+The package supports for approximate similarity search using aggressive pruning
+
+```
+Chávez, E., & Navarro, G. (2001, January). A probabilistic spell for the curse of dimensionality. In Workshop on Algorithm Engineering and Experimentation (pp. 147-160). Springer, Berlin, Heidelberg.
+```
+
 
 I will also add some new structures related to them.
 

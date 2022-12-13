@@ -12,10 +12,10 @@ struct DistalSortSat <: AbstractSortSat end
         dist::DT
         db::DBT
         root::UInt32
-        prunning_factor::Float32
+        pruning_factor::Float32
         parents::Vector{UInt32}
         children::Vector{Union{Nothing,Vector{UInt32}}}
-        cov::Vector{Float32} # leafs: d(parent, leaf), internal: max {d(parent, u) | u \in children(parent)}
+        cov::Vector{Float32} # leafs: ``- d(parent, leaf)``, internal: ``\\max \\{d(parent, u) | u \\in children(parent)\\}``
     end
 
 Spatial Access Tree data structure. Please see `Sat` function for high level constructors
@@ -24,7 +24,7 @@ struct Sat{DT<:SemiMetric,DBT<:AbstractDatabase} <: AbstractSearchIndex
     dist::DT
     db::DBT
     root::UInt32
-    prunning_factor::Float32
+    pruning_factor::Float32
     parents::Vector{UInt32}
     children::Vector{Union{Nothing,Vector{UInt32}}}
     cov::Vector{Float32} # leafs: d(parent, leaf), internal: max {d(parent, u) | u \in children(parent)}
@@ -35,13 +35,13 @@ function Sat(
         dist=sat.dist,
         db=sat.db,
         root=sat.root,
-        prunning_factor=sat.prunning_factor,
+        pruning_factor=sat.pruning_factor,
         parents=sat.parents,
         children=sat.children,
         cov=sat.cov
     )
 
-    Sat(dist, db, convert(UInt32, root), convert(Float32, prunning_factor), parents, children, cov)
+    Sat(dist, db, convert(UInt32, root), convert(Float32, pruning_factor), parents, children, cov)
 end
 
 """
@@ -56,14 +56,14 @@ Prepares the metric data structure. After calling this constructor, please call 
 # Keyword arguments
 - `dist`: distance function, defaults to L2Distance()
 - `root`: The dataset's element to be used as root
-- `prunning_factor`: factor for aggressive prunning candidates, valid range: ``0 < prunning_factor \\leq 1``, an exact search is made when `prunning_factor=1`.
+- `pruning_factor`: factor for aggressive pruning candidates, valid range: ``0 < pruning_factor \\leq 1``, an exact search is made when `pruning_factor=1`.
 """
-function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1, prunning_factor=1f0)
+function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1, pruning_factor=1f0)
     n = length(db)
     P = zeros(UInt32, n)
     C = Union{Nothing,Vector{UInt32}}[nothing for _ in 1:n]
     cov = Vector{Float32}(undef, n)
-    Sat(dist, db, convert(UInt32, root), convert(Float32, prunning_factor), P, C, cov)
+    Sat(dist, db, convert(UInt32, root), convert(Float32, pruning_factor), P, C, cov)
 end
 
 @inline getpools(::Sat) = nothing
@@ -114,7 +114,7 @@ function index!(
                 if length(C) >= minleaf
                     push!(queue, c)
                 else
-                    sat.cov[c] = abs(sum(sat.cov[i] for i in C))
+                    sat.cov[c] = maximum(abs(sat.cov[i]) for i in C)
                 end
             end
         end
@@ -214,7 +214,7 @@ function searchtree(sat::Sat, q, p::Integer, res::KnnResult)
     push!(res, p, dqp)
 
     if sat.children[p] !== nothing # inner node
-        if length(res) < maxlength(res) || dqp < sat.prunning_factor * maximum(res) + sat.cov[p]
+        if length(res) < maxlength(res) || dqp < sat.pruning_factor * maximum(res) + sat.cov[p]
             for c in sat.children[p]
                 cost += searchtree(sat, q, c, res)
             end
