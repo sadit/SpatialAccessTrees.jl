@@ -1,7 +1,14 @@
 module SpatialAccessTrees
 
 using SimilaritySearch, Random
-import SimilaritySearch: search, index!, evaluate, getpools, getknnresult, database, distance
+
+import SimilaritySearch:
+    search, index!, getpools, getknnresult, database, distance,
+    optimization_space, optimize!, setconfig!, runconfig
+
+using SimilaritySearch:
+    ErrorFunction, AbstractSolutionSpace
+
 
 const BeamKnnResult = [KnnResult(32)]  # see __init__ function
 

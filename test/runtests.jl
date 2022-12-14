@@ -4,7 +4,7 @@ using Test
 @testset "SpatialAccessTrees" begin
     dim = 8
     dist = L2Distance()
-    n = 100_000
+    n = 10_000
     m = 64
     k = 4
     db = MatrixDatabase(rand(Float32, dim, n))
@@ -28,16 +28,20 @@ using Test
         @test recall >= 0.9999
 
         asat = Sat(sat; pruning_factor=0.4)
-        asearchtime = @elapsed Iasat, Dasat = searchbatch(asat, queries, k)
-        arecall = macrorecall(Igold, Iasat)
+        asearchtime = @elapsed Ia, Da = searchbatch(asat, queries, k)
+        arecall = macrorecall(Igold, Ia)
 
-        bssat = BeamSearchSat(sat; bsize=32, Δ=1.5)
-        bssearchtime = @elapsed Ibssat, Dbssat = searchbatch(bssat, queries, k)
-        bsrecall = macrorecall(Igold, Ibssat)
+        bsat = BeamSearchSat(sat)
+        optimize!(bsat, MinRecall(0.5), verbose=true)
+        bsearchtime = @elapsed Ib, Db = searchbatch(bsat, queries, k)
+        @info bsat
+        @time Ib, Db = searchbatch(bsat, queries, k)
+        brecall = macrorecall(Igold, Ib)
 
         @show "------------ "
-        @show " exact" recall (goldsearchtime / searchtime)
-        @show " approx" arecall (goldsearchtime / asearchtime)
-        @show " bs approx" bsrecall (goldsearchtime / bssearchtime)
+        @show " exact:" recall (goldsearchtime / searchtime)
+        @show " probabilistic spell:" arecall (goldsearchtime / asearchtime)
+        @show " beam search:" brecall (goldsearchtime / bsearchtime)
+        break
     end
 end
