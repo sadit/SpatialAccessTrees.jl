@@ -32,16 +32,21 @@ function beamsearch(sat::Sat, bsize::Int32, Δ::Float32, q, res::KnnResult)
     push!(res, root, d)
     sat.children[root] !== nothing && push!(beam, root, d)
 
-    
-    while length(beam) > 0
-        (i_, _) = popfirst!(beam)
+    bsize = maxlength(beam)
+    sp = 1
+
+    @inbounds while sp <= length(beam)
+        i_ = getid(beam, sp)
+        sp += 1
+
         for c in sat.children[i_]
             d = evaluate(dist, q, database(sat, c))
             cost += 1
             push!(res, c, d)
         
             if sat.children[c] !== nothing && d <= Δ * maximum(res)
-                push!(beam, c, d)
+                # push!(beam, c, d)
+                push!(beam, c, d; sp, k=bsize+sp)
             end
         end
     end
