@@ -28,13 +28,14 @@ using Test
         recall = macrorecall(Igold, Isat)
         @test recall >= 0.9999
 
-        asat = Sat(sat; pruning_factor=0.4)
+        asat = PruningSat(sat)
+        optimize!(asat, MinRecall(0.9))
         Ia, Da = searchbatch(asat, queries, k)
         asearchtime = @elapsed Ia, Da = searchbatch(asat, queries, k)
         arecall = macrorecall(Igold, Ia)
 
         bsat = BeamSearchSat(sat)
-        optimize!(bsat, MinRecall(0.9), verbose=true)
+        optimize!(bsat, MinRecall(0.9), verbose=false)
         Ib, Db = searchbatch(bsat, queries, k)
         bsearchtime = @elapsed Ib, Db = searchbatch(bsat, queries, k)
         brecall = macrorecall(Igold, Ib)
@@ -43,6 +44,6 @@ using Test
         @info " exact:" recall searchtime (bruteforcesearchtime / searchtime)
         @info " probabilistic spell:" arecall asearchtime (bruteforcesearchtime / asearchtime)
         @info " beam search:" brecall bsearchtime (bruteforcesearchtime / bsearchtime)
-        break
+        
     end
 end

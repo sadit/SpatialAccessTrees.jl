@@ -1,10 +1,10 @@
 module SpatialAccessTrees
 
-using SimilaritySearch, Random
+using SimilaritySearch, Parameters, SearchModels, Random
 
 import SimilaritySearch:
     search, index!, getpools, getknnresult, database, distance,
-    optimization_space, optimize!, setconfig!, runconfig
+    optimization_space, optimize!, setconfig!, runconfig, mutate, combine
 
 using SimilaritySearch:
     ErrorFunction, AbstractSolutionSpace
@@ -20,5 +20,8 @@ end
 
 include("sat.jl")
 include("bs.jl")
+include("spell.jl")
+include("spellopt.jl")
+
 end
  

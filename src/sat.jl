@@ -12,7 +12,6 @@ struct DistalSortSat <: AbstractSortSat end
         dist::DT
         db::DBT
         root::UInt32
-        pruning_factor::Float32
         parents::Vector{UInt32}
         children::Vector{Union{Nothing,Vector{UInt32}}}
         cov::Vector{Float32} # leafs: ``- d(parent, leaf)``, internal: ``\\max \\{d(parent, u) | u \\in children(parent)\\}``
@@ -24,7 +23,6 @@ struct Sat{DT<:SemiMetric,DBT<:AbstractDatabase} <: AbstractSearchIndex
     dist::DT
     db::DBT
     root::UInt32
-    pruning_factor::Float32
     parents::Vector{UInt32}
     children::Vector{Union{Nothing,Vector{UInt32}}}
     cov::Vector{Float32} # leafs: d(parent, leaf), internal: max {d(parent, u) | u \in children(parent)}
@@ -35,13 +33,12 @@ function Sat(
         dist=sat.dist,
         db=sat.db,
         root=sat.root,
-        pruning_factor=sat.pruning_factor,
         parents=sat.parents,
         children=sat.children,
         cov=sat.cov
     )
 
-    Sat(dist, db, convert(UInt32, root), convert(Float32, pruning_factor), parents, children, cov)
+    Sat(dist, db, convert(UInt32, root), parents, children, cov)
 end
 
 """
@@ -56,14 +53,13 @@ Prepares the metric data structure. After calling this constructor, please call 
 # Keyword arguments
 - `dist`: distance function, defaults to L2Distance()
 - `root`: The dataset's element to be used as root
-- `pruning_factor`: factor for aggressive pruning candidates, valid range: ``0 < pruning_factor \\leq 1``, an exact search is made when `pruning_factor=1`.
 """
-function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1, pruning_factor=1f0)
+function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1)
     n = length(db)
     P = zeros(UInt32, n)
     C = Union{Nothing,Vector{UInt32}}[nothing for _ in 1:n]
     cov = Vector{Float32}(undef, n)
-    Sat(dist, db, convert(UInt32, root), convert(Float32, pruning_factor), P, C, cov)
+    Sat(dist, db, convert(UInt32, root), P, C, cov)
 end
 
 @inline getpools(::Sat) = nothing
@@ -127,6 +123,7 @@ end
 function Base.show(io::IO, sat::Sat)
     io = IOContext(io, :compact => true, :limit => true)
     println(io, "{\n  ", typeof(sat), " n=", length(sat), "\n")
+
     for j in eachindex(sat.children)
         print(io, "  [", j, "] ")
         show(io, sat.children[j])
@@ -215,7 +212,7 @@ function searchtree(sat::Sat, q, p::Integer, res::KnnResult)
     push!(res, p, dqp)
 
     if sat.children[p] !== nothing # inner node
-        if length(res) < maxlength(res) || dqp < sat.pruning_factor * maximum(res) + sat.cov[p]
+        if length(res) < maxlength(res) || dqp < maximum(res) + sat.cov[p]
             for c in sat.children[p]
                 cost += searchtree(sat, q, c, res)
             end
