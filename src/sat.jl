@@ -105,6 +105,7 @@ function index!(
     sat.parents[p] = 0 # root has no parent
     sat.cov[p] = 0f0 # initializes cov for n = 1
     queue = UInt32[p]
+    
     while length(queue) > 0
         p = pop!(queue)
         index_sat_neighbors!(sat, sat.children[p], D, p, sortsat)

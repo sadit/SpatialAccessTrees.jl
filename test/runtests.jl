@@ -4,7 +4,7 @@ using Test
 @testset "SpatialAccessTrees" begin
     dim = 8
     dist = L2Distance()
-    n = 10_000
+    n = 100_000
     m = 64
     k = 4
     db = MatrixDatabase(rand(Float32, dim, n))
@@ -27,14 +27,17 @@ using Test
         recall = macrorecall(Igold, Isat)
         @test recall >= 0.9999
 
-        asat = Sat(sat; pruning_factor=0.75)
+        asat = Sat(sat; pruning_factor=0.4)
         asearchtime = @elapsed Iasat, Dasat = searchbatch(asat, queries, k)
         arecall = macrorecall(Igold, Iasat)
+
+        bssat = BeamSearchSat(sat; bsize=32, Δ=1.5)
+        bssearchtime = @elapsed Ibssat, Dbssat = searchbatch(bssat, queries, k)
+        bsrecall = macrorecall(Igold, Ibssat)
 
         @show "------------ "
         @show " exact" recall (goldsearchtime / searchtime)
         @show " approx" arecall (goldsearchtime / asearchtime)
+        @show " bs approx" bsrecall (goldsearchtime / bssearchtime)
     end
 end
-
-
