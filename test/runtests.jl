@@ -18,7 +18,7 @@ using Test
         
         sat = Sat(db; dist)
         @time index!(sat; sortsat, minleaf)
-        @show sat
+        # @show sat
         # checking that the database size and the number of inserted elements is consistent
         @test n == 1 + sum(length(C) for C in sat.children if C !== nothing)
         # checking that cov is consistent with children
@@ -44,6 +44,5 @@ using Test
         @info " exact:" recall searchtime (bruteforcesearchtime / searchtime)
         @info " probabilistic spell:" arecall asearchtime (bruteforcesearchtime / asearchtime)
         @info " beam search:" brecall bsearchtime (bruteforcesearchtime / bsearchtime)
-        
     end
 end
