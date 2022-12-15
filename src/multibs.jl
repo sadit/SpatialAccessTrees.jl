@@ -25,10 +25,10 @@ end
 function beamsearch(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, q, res::KnnResult) where {SatType<:Sat}
     beam = reuse!(BeamKnnResult[Threads.threadid()], bsize)
     sat = satarr[1]
-    vstate = reuse!(GlobalVisitedVertices[Threads.threadid()], length(sat))
     dist = distance(sat)
     root = sat.root
     cost = 1
+    vstate = reuse!(GlobalVisitedVertices[Threads.threadid()], length(sat))
     d = evaluate(dist, q, database(sat, root))
     push!(res, root, d)
     sat.children[root] !== nothing && push!(beam, root, d)
@@ -42,7 +42,6 @@ function beamsearch(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, q, res::
         i_ = getid(beam, sp)
         sp += 1
         round_robin = ifelse(round_robin == m, 1, round_robin + 1)
-        # round_robin = (round_robin > m) ? 1 : round_robin + 1
         sat = satarr[round_robin]
 
         C = sat.children[i_]

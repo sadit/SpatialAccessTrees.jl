@@ -12,7 +12,7 @@ struct DistalSortSat <: AbstractSortSat end
         dist::DT
         db::DBT
         root::UInt32
-        parents::Vector{UInt32}
+        # parents::Vector{UInt32}
         children::Vector{Union{Nothing,Vector{UInt32}}}
         cov::Vector{Float32} # leafs: ``- d(parent, leaf)``, internal: ``\\max \\{d(parent, u) | u \\in children(parent)\\}``
     end
@@ -23,7 +23,7 @@ struct Sat{DT<:SemiMetric,DBT<:AbstractDatabase} <: AbstractSearchIndex
     dist::DT
     db::DBT
     root::UInt32
-    parents::Vector{UInt32}
+    # parents::Vector{UInt32}
     children::Vector{Union{Nothing,Vector{UInt32}}}
     cov::Vector{Float32} # leafs: d(parent, leaf), internal: max {d(parent, u) | u \in children(parent)}
 end
@@ -33,12 +33,13 @@ function Sat(
         dist=sat.dist,
         db=sat.db,
         root=sat.root,
-        parents=sat.parents,
+        # parents=sat.parents,
         children=sat.children,
         cov=sat.cov
     )
 
-    Sat(dist, db, convert(UInt32, root), parents, children, cov)
+    # Sat(dist, db, convert(UInt32, root), parents, children, cov)
+    Sat(dist, db, convert(UInt32, root), children, cov)
 end
 
 """
@@ -56,10 +57,11 @@ Prepares the metric data structure. After calling this constructor, please call 
 """
 function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1)
     n = length(db)
-    P = zeros(UInt32, n)
+    #P = zeros(UInt32, n)
     C = Union{Nothing,Vector{UInt32}}[nothing for _ in 1:n]
     cov = Vector{Float32}(undef, n)
-    Sat(dist, db, convert(UInt32, root), P, C, cov)
+    #Sat(dist, db, convert(UInt32, root), P, C, cov)
+    Sat(dist, db, convert(UInt32, root), C, cov)
 end
 
 @inline getpools(::Sat) = nothing
@@ -98,7 +100,7 @@ function index!(
     p::UInt32 = sat.root
     sat.children[p] = collect(Iterators.flatten((1:p-1, p+1:n)))
     randomize && shuffle!(sat.children[p])
-    sat.parents[p] = 0 # root has no parent
+    # sat.parents[p] = 0 # root has no parent
     sat.cov[p] = 0f0 # initializes cov for n = 1
     queue = UInt32[p]
     
@@ -189,7 +191,7 @@ function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::Abstra
         nn = argmin(res)
         
         sat.cov[i_] = -minimum(res) # distance to parent, marked as negative
-        sat.parents[i_] = nn
+        # sat.parents[i_] = nn
 
         if sat.children[nn] === nothing
             sat.children[nn] = UInt32[i_]
