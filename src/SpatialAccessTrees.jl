@@ -7,7 +7,7 @@ import SimilaritySearch:
     optimization_space, optimize!, setconfig!, runconfig, mutate, combine
 
 using SimilaritySearch:
-    ErrorFunction, AbstractSolutionSpace
+    ErrorFunction, AbstractSolutionSpace, GlobalVisitedVertices, visit!, check_visited_and_visit!
 
 
 const BeamKnnResult = [KnnResult(32)]  # see __init__ function
@@ -22,6 +22,7 @@ include("sat.jl")
 include("bs.jl")
 include("spell.jl")
 include("spellopt.jl")
+include("multibs.jl")
 
 end
  

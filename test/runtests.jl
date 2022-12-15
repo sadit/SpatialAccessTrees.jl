@@ -18,7 +18,7 @@ using Test
         
         sat = Sat(db; dist)
         @time index!(sat; sortsat, minleaf)
-        # @show sat
+        @show sat
         # checking that the database size and the number of inserted elements is consistent
         @test n == 1 + sum(length(C) for C in sat.children if C !== nothing)
         # checking that cov is consistent with children
@@ -30,19 +30,30 @@ using Test
 
         asat = PruningSat(sat)
         optimize!(asat, MinRecall(0.9))
-        Ia, Da = searchbatch(asat, queries, k)
-        asearchtime = @elapsed Ia, Da = searchbatch(asat, queries, k)
+        Ia, _ = searchbatch(asat, queries, k)
+        asearchtime = @elapsed Ia, _ = searchbatch(asat, queries, k)
         arecall = macrorecall(Igold, Ia)
+        @test arecall > 0.6 ## it should be close to 0.9, but anyway errors will show very low recall
 
         bsat = BeamSearchSat(sat)
         optimize!(bsat, MinRecall(0.9), verbose=false)
-        Ib, Db = searchbatch(bsat, queries, k)
-        bsearchtime = @elapsed Ib, Db = searchbatch(bsat, queries, k)
+        Ib, _ = searchbatch(bsat, queries, k)
+        bsearchtime = @elapsed Ib, _ = searchbatch(bsat, queries, k)
         brecall = macrorecall(Igold, Ib)
+        @test brecall > 0.6
+
+        csat = BeamSearchMultiSat([index!(Sat(db; dist, root=rand(1:n)); sortsat, minleaf) for _ in 1:8])
+        optimize!(csat, MinRecall(0.9), verbose=false)
+        Ic, _ = searchbatch(csat, queries, k)
+        csearchtime = @elapsed Ic, _ = searchbatch(csat, queries, k)
+        crecall = macrorecall(Igold, Ic)
+        @test crecall > 0.6
 
         @info "------------ brute force: $bruteforcesearchtime "
         @info " exact:" recall searchtime (bruteforcesearchtime / searchtime)
         @info " probabilistic spell:" arecall asearchtime (bruteforcesearchtime / asearchtime)
         @info " beam search:" brecall bsearchtime (bruteforcesearchtime / bsearchtime)
+        @info " beam search - multi sat:" crecall csearchtime (bruteforcesearchtime / csearchtime)
+        break
     end
 end
