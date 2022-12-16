@@ -43,7 +43,7 @@ using Test
         brecall = macrorecall(Igold, Ib)
         @test brecall > 0.6
 
-        csat = BeamSearchMultiSat([index!(Sat(db; dist, root=rand(1:n)); sortsat, minleaf) for _ in 1:4])
+        csat = BeamSearchMultiSat([index!(Sat(db; dist, root=rand(1:n)); sortsat, minleaf) for _ in 1:8])
         # @show [s.root for s in csat.sat]
         clist = optimize!(csat, MinRecall(0.9), numqueries=16, verbose=false)
         #@show csat.bs

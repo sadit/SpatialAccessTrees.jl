@@ -48,6 +48,7 @@ function beamsearchmultisat(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, 
             C = sat.children[i_]
 
             for c in C
+                check_visited_and_visit!(vstate, convert(UInt64, c)) && continue
                 d = evaluate(dist, q, database(sat, c))
                 cost += 1
                 push!(res, c, d)
@@ -57,7 +58,6 @@ function beamsearchmultisat(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, 
                 end
             end
         end
-        break
     end
     
     (; res, cost)
