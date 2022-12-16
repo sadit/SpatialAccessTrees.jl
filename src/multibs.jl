@@ -7,6 +7,11 @@ struct BeamSearchMultiSat{ST<:Sat} <: AbstractSearchIndex
     sat::Vector{ST}
 end
 
+"""
+    BeamSearchMultiSat(sat::Vector{SatType}; bsize=8, Δ=1f0) where {SatType<:Sat}
+
+Applies beam search on a multi SAT array. See [`optimize!`](@ref) to tune the index for some objective.
+"""
 BeamSearchMultiSat(sat::Vector{SatType}; bsize=8, Δ=1f0) where {SatType<:Sat} =
     BeamSearchMultiSat(BeamSearch(; bsize, Δ), sat)
 
@@ -63,53 +68,7 @@ function beamsearchmultisat(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, 
     (; res, cost)
 end
 
-#=
-function beamsearchmultisat(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, q, res::KnnResult) where {SatType<:Sat}
-    beam = reuse!(BeamKnnResult[Threads.threadid()], bsize)
-    sat = satarr[1]
-    dist = distance(sat)
-    root = sat.root
-    cost = 1
-    vstate = reuse!(GlobalVisitedVertices[Threads.threadid()], length(sat))
-    d = evaluate(dist, q, database(sat, root))
-    push!(res, root, d)
-    sat.children[root] !== nothing && push!(beam, root, d)
-    visit!(vstate, convert(UInt64, root))
 
-    bsize = maxlength(beam)
-    m = length(satarr)
-    sp = 1
-
-    @inbounds while sp <= length(beam)
-        i_ = getid(beam, sp)
-        sp += 1
-        C = sat.children[i_]
-
-        if C === nothing
-            for round_robin in 1:m
-                C = satarr[round_robin].children[i_]
-                C !== nothing && break
-            end
-        end
-
-        C === nothing && continue
-
-        for c in C
-            d = evaluate(dist, q, database(sat, c))
-            cost += 1
-            push!(res, c, d)
-
-            # if sat.children[c] !== nothing && d <= Δ * maximum(res)
-            if d <= Δ * maximum(res)
-                check_visited_and_visit!(vstate, convert(UInt64, c)) && continue
-                push!(beam, c, d; sp, k=bsize+sp)
-            end
-        end
-    end
-
-    (; res, cost)
-end
-=#
 search(bs::BeamSearchMultiSat, q, res::KnnResult; pools=nothing) = beamsearchmultisat(bs.sat, bs.bs.bsize, bs.bs.Δ, q, res)
 
 ## Optimization

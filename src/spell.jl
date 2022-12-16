@@ -10,6 +10,13 @@ struct PruningSat{ST<:Sat} <: AbstractSearchIndex
     sat::ST
 end
 
+"""
+    PruningSat(sat::Sat; factor=0.9)
+
+Creates an approximate similarity sarch index based on sat and aggressive pruning; adapted from the paper
+_A probabilistic spell for the curse of dimensionality_ (Chavez and Navarro, 2001).
+It supports auto-tuning via  [`optimize!`](@ref).
+"""
 PruningSat(sat::Sat; factor=0.9) = PruningSat(PruningSatFactor(convert(Float32, factor)), sat)
 
 function Base.show(io::IO, psat::PruningSat)
