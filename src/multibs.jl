@@ -22,7 +22,7 @@ end
 @inline distance(bs::BeamSearchMultiSat) = distance(bs.sat[1])
 @inline Base.length(bs::BeamSearchMultiSat) = length(bs.sat[1])
 
-function beamsearch(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, q, res::KnnResult) where {SatType<:Sat}
+function beamsearchmultisat(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, q, res::KnnResult) where {SatType<:Sat}
     beam = reuse!(BeamKnnResult[Threads.threadid()], bsize)
     sat = satarr[1]
     dist = distance(sat)
@@ -34,25 +34,31 @@ function beamsearch(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, q, res::
     sat.children[root] !== nothing && push!(beam, root, d)
     visit!(vstate, convert(UInt64, root))
 
-    round_robin, m = 0, length(satarr)
     bsize = maxlength(beam)
+    m = length(satarr)
     sp = 1
 
     @inbounds while sp <= length(beam)
         i_ = getid(beam, sp)
         sp += 1
-        round_robin = ifelse(round_robin == m, 1, round_robin + 1)
-        sat = satarr[round_robin]
-
         C = sat.children[i_]
+
+        if C === nothing
+            for round_robin in 1:m
+                C = satarr[round_robin].children[i_]
+                C !== nothing && break
+            end
+        end
+
         C === nothing && continue
+
         for c in C
             d = evaluate(dist, q, database(sat, c))
             cost += 1
             push!(res, c, d)
-        
-            if sat.children[c] !== nothing && d <= Δ * maximum(res)
-                # push!(beam, c, d)
+
+            # if sat.children[c] !== nothing && d <= Δ * maximum(res)
+            if d <= Δ * maximum(res)
                 check_visited_and_visit!(vstate, convert(UInt64, c)) && continue
                 push!(beam, c, d; sp, k=bsize+sp)
             end
@@ -62,16 +68,16 @@ function beamsearch(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, q, res::
     (; res, cost)
 end
 
-search(bs::BeamSearchMultiSat, q, res::KnnResult; pools=nothing) = beamsearch(bs.sat, bs.bs.bsize, bs.bs.Δ, q, res)
+search(bs::BeamSearchMultiSat, q, res::KnnResult; pools=nothing) = beamsearchmultisat(bs.sat, bs.bs.bsize, bs.bs.Δ, q, res)
 
 ## Optimization
 
 optimization_space(::BeamSearchMultiSat) =
     BeamSearchSpace(;
-        Δ = [0.8, 1.0, 1.3, 1.5],
         bsize = 8:16:64,
-        bsize_scale = (s=1.5, p1=0.5, p2=0.5, lower=4, upper=256),
-        Δ_scale = (s=1.1, p1=0.5, p2=0.5, lower=0.5, upper=3.0)
+        Δ = [0.8, 1.0, 1.3, 1.5],
+        bsize_scale = (s=1.5, p1=0.5, p2=0.5, lower=4, upper=512),
+        Δ_scale = (s=1.1, p1=0.5, p2=0.5, lower=0.5, upper=2.0)
     )
 
 function optimize!(
@@ -102,5 +108,5 @@ function setconfig!(bs::BeamSearch, index::BeamSearchMultiSat, perf)
 end
 
 function runconfig(bs::BeamSearch, index::BeamSearchMultiSat, q, res::KnnResult, pools)
-    beamsearch(index.sat, bs.bsize, bs.Δ, q, res)
+    beamsearchmultisat(index.sat, bs.bsize, bs.Δ, q, res)
 end

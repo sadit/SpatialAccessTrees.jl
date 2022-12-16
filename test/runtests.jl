@@ -37,13 +37,16 @@ using Test
 
         bsat = BeamSearchSat(sat)
         optimize!(bsat, MinRecall(0.9), verbose=false)
+        @show bsat.bs
         Ib, _ = searchbatch(bsat, queries, k)
         bsearchtime = @elapsed Ib, _ = searchbatch(bsat, queries, k)
         brecall = macrorecall(Igold, Ib)
         @test brecall > 0.6
 
         csat = BeamSearchMultiSat([index!(Sat(db; dist, root=rand(1:n)); sortsat, minleaf) for _ in 1:8])
-        optimize!(csat, MinRecall(0.9), verbose=false)
+        # @show [s.root for s in csat.sat]
+        @show optimize!(csat, MinRecall(0.9), verbose=false)
+        @show csat.bs
         Ic, _ = searchbatch(csat, queries, k)
         csearchtime = @elapsed Ic, _ = searchbatch(csat, queries, k)
         crecall = macrorecall(Igold, Ic)
