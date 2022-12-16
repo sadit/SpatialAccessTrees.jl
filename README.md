@@ -1,4 +1,4 @@
-![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://sadit.github.io/SpatialAccessTrees.jl/dev/)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://sadit.github.io/SpatialAccessTrees.jl/dev/)
 [![Build Status](https://github.com/sadit/SpatialAccessTrees.jl/workflows/CI/badge.svg)](https://github.com/sadit/SpatialAccessTrees.jl/actions)
 [![Coverage](https://codecov.io/gh/sadit/SpatialAccessTrees.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sadit/SpatialAccessTrees.jl)
 

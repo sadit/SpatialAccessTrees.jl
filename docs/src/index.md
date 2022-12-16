@@ -20,7 +20,7 @@ DistalSortSat
 RandomSortSat
 ```
 
-# Approximate
+# Approximate similarity search
 ```@docs
 PruningSat
 BeamSearchSat
