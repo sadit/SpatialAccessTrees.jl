@@ -1,7 +1,7 @@
 name = "SpatialAccessTrees"
 uuid = "c0867ef0-7eb8-477c-bc68-2f3754ecb96a"
 authors = ["Eric S. Tellez <donsadit@gmail.com> and contributors"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
