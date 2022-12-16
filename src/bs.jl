@@ -45,7 +45,6 @@ function beamsearch(sat::Sat, bsize::Int32, Δ::Float32, q, res::KnnResult)
             push!(res, c, d)
         
             if sat.children[c] !== nothing && d <= Δ * maximum(res)
-                # push!(beam, c, d)
                 push!(beam, c, d; sp, k=bsize+sp)
             end
         end
@@ -60,8 +59,8 @@ search(bs::BeamSearchSat, q, res::KnnResult; pools=nothing) = beamsearch(bs.sat,
 
 optimization_space(::BeamSearchSat) =
     BeamSearchSpace(;
-        Δ = [0.8, 1.0, 1.3, 1.5],
         bsize = 8:16:64,
+        Δ = [0.8, 1.0, 1.3, 1.5],
         bsize_scale = (s=1.5, p1=0.5, p2=0.5, lower=4, upper=256),
         Δ_scale = (s=1.1, p1=0.5, p2=0.5, lower=0.5, upper=3.0)
     )
