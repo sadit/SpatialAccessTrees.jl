@@ -6,17 +6,28 @@ DocTestSetup = quote
 end
 ```
 
-## Indexes
-
+# Spatial Access Trees (SAT)
 ```@docs
 Sat
 index!
 ```
 
-## Searching
+## SAT orders
 
 ```@docs
-search
+ProximalSortSat
+DistalSortSat
+RandomSortSat
+```
+
+# Approximate
+```@docs
+PruningSat
+BeamSearchSat
+BeamSearchMultiSat
+
+optimize!
+```
 
 ```@autodocs
 Modules = [SpatialAccessTrees]

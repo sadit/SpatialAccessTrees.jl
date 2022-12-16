@@ -1,3 +1,7 @@
+![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://sadit.github.io/SpatialAccessTrees.jl/dev/)
+[![Build Status](https://github.com/sadit/SpatialAccessTrees.jl/workflows/CI/badge.svg)](https://github.com/sadit/SpatialAccessTrees.jl/actions)
+[![Coverage](https://codecov.io/gh/sadit/SpatialAccessTrees.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/sadit/SpatialAccessTrees.jl)
+
 # SpatialAccessTrees
 
 Spatial access trees are a family of metric trees having excellent performance on low and medium dimensional datasets. 
@@ -21,7 +25,7 @@ Chávez, E., & Navarro, G. (2001, January). A probabilistic spell for the curse 
 ```
 
 
-I will also add some new structures related to them.
+I will also add some new structures and algorithms related to Spatial Access Trees.
 
 
 This package was designed to work with [`SimilaritySearch.jl`](https://github.com/sadit/SimilaritySearch.jl).
