@@ -57,7 +57,7 @@ Prepares the metric data structure. After calling this constructor, please call 
 """
 function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1)
     n = length(db)
-    #P = zeros(UInt32, n)
+    # P = zeros(UInt32, n)
     C = Union{Nothing,Vector{UInt32}}[nothing for _ in 1:n]
     cov = Vector{Float32}(undef, n)
     #Sat(dist, db, convert(UInt32, root), P, C, cov)
@@ -92,29 +92,23 @@ Performs the indexing of the referenced dataset in the spatial access tree.
 function index!(
         sat::Sat;
         sortsat::AbstractSortSat=ProximalSortSat(),
-        minleaf::Int=log2(ceil(database(sat))),
-        randomize=false
+        minleaf::Int=log2(ceil(database(sat)))
     )
     n = length(sat)
     D = Vector{Tuple{Float32,UInt32}}(undef, n)
     p::UInt32 = sat.root
     sat.children[p] = collect(Iterators.flatten((1:p-1, p+1:n)))
-    randomize && shuffle!(sat.children[p])
     # sat.parents[p] = 0 # root has no parent
     sat.cov[p] = 0f0 # initializes cov for n = 1
     queue = UInt32[p]
     
     while length(queue) > 0
         p = pop!(queue)
-        index_sat_neighbors!(sat, sat.children[p], D, p, sortsat)
+        index_sat_neighbors!(sat, sat.children[p], D, p, sortsat, minleaf)
         for c in sat.children[p]
             C = sat.children[c]
             if C !== nothing
-                if length(C) >= minleaf
-                    push!(queue, c)
-                else
-                    sat.cov[c] = maximum(abs(sat.cov[i]) for i in C)
-                end
+                push!(queue, c)
             end
         end
     end
@@ -144,9 +138,10 @@ function index_sat_neighbors!(sat::Sat, C::Nothing, D, p::UInt32, sortsat::Abstr
     # do nothing
 end
 
-function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::AbstractSortSat)
+function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::AbstractSortSat, minleaf::Integer)
     # note: D is a cache of distances and objects, it is used in two ways in this function
-    n = length(sat.children[p])
+    C = sat.children[p]
+    n = length(C)
 
     resize!(D, n)
     parent = database(sat, p)
@@ -154,33 +149,41 @@ function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::Abstra
 
     # computing distance to its parent (stored in D)
     sat.cov[p] = 0f0
-    C = sat.children[p]
     #L = Threads.SpinLock()
 
-    #Threads.@threads
     for i in eachindex(C) #(i, c) in enumerate()
         c = C[i]
         d = evaluate(dist, parent, database(sat, c))
         D[i] = (convert(Float32, d), c)
-        #lock(L) do
+        # not thread-safe:
         sat.cov[p] = max(sat.cov[p], d) # covering radius
-        #end
     end
 
     T = typeof(sortsat)
-    if T === RandomSortSat
-        shuffle!(D)
-    else
-        sort!(D, by=first, rev=(T === DistalSortSat))
+    sort!(D, by=first)
+
+    minleaf = min(n, minleaf)
+    @inbounds for i in 1:minleaf
+        (d_, i_) = D[i]
+        D[i] = (-d_, i_)
+    end
+
+    if minleaf < n
+        if T === RandomSortSat
+            shuffle!(D)
+        elseif T === DistalSortSat
+            reverse!(D)
+        end
     end
 
     # computing nearest neighbors of $child \in D$ (using previous D and storing the new set on D)
     empty!(C)
-    #push!(C, last(D[1]))
 
     for (d_, i_) in D
+        d_ <= 0  && continue # negative distances encode mandatory leafs, see next outside-for-loop
+
         res = getknnresult(1)
-        push!(res, p, d_)
+        push!(res, p, d_)  # insert parent
         child = database(sat, i_)
 
         for j in C
@@ -189,14 +192,20 @@ function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::Abstra
         end
 
         nn = argmin(res)
-        
-        sat.cov[i_] = -minimum(res) # distance to parent, marked as negative
+        sat.cov[i_] = minimum(res) # distance to parent, marked as negative
         # sat.parents[i_] = nn
-
         if sat.children[nn] === nothing
             sat.children[nn] = UInt32[i_]
         else
             push!(sat.children[nn], i_)
+        end
+    end
+
+    for (d_, i_) in D
+        if d_ <= 0  # negative distances encode mandatory leafs
+            sat.cov[i_] = abs(d_)
+            push!(C, i_)
+            continue 
         end
     end
 end

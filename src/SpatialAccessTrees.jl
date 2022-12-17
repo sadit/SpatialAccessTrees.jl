@@ -1,13 +1,13 @@
 module SpatialAccessTrees
 
-using SimilaritySearch, Parameters, SearchModels, Random
+using SimilaritySearch, Parameters, SearchModels, Random, Polyester
 
 import SimilaritySearch:
     search, index!, getpools, getknnresult, database, distance,
     optimization_space, optimize!, setconfig!, runconfig, mutate, combine
 
 using SimilaritySearch:
-    ErrorFunction, AbstractSolutionSpace, GlobalVisitedVertices, visit!, check_visited_and_visit!
+    ErrorFunction, AbstractSolutionSpace, GlobalVisitedVertices, visit!, check_visited_and_visit!, getminbatch
 
 
 const BeamKnnResult = [KnnResult(32)]  # see __init__ function
