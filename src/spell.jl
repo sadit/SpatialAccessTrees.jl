@@ -1,4 +1,5 @@
 # this file is part of SpatialAccessTrees.jl
+
 export PruningSat
 
 mutable struct PruningSatFactor

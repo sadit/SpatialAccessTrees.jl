@@ -1,3 +1,5 @@
+# this file is part of SpatialAccessTrees.jl
+
 module SpatialAccessTrees
 
 using SimilaritySearch, Parameters, SearchModels, Random, Polyester
@@ -23,6 +25,7 @@ include("bs.jl")
 include("spell.jl")
 include("spellopt.jl")
 include("multibs.jl")
+include("permsat.jl")
 
 end
  

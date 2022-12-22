@@ -1,6 +1,6 @@
 # this file is part of SpatialAccessTrees.jl
 
-export Sat, RandomSortSat, ProximalSortSat, DistalSortSat, search, searchbatch, index!
+export Sat, RandomSortSat, ProximalSortSat, DistalSortSat, search, searchbatch, index!, satpermutation, satpermutation!, permute
 
 abstract type AbstractSortSat end
 struct RandomSortSat <: AbstractSortSat end

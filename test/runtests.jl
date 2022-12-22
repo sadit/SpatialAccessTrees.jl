@@ -1,18 +1,16 @@
+# this file is part of SpatialAccessTrees.jl
+
 using SpatialAccessTrees, SimilaritySearch
 using Test
 
 @testset "SpatialAccessTrees" begin
-    dim = 4
-    dist = L2Distance()
-    n = 100_000
-    m = 100
-    k = 10
+    #n, m, k, dim, minleaf, dist = 100, 10, 3, 2, 6, L2Distance()
+    n, m, k, dim, minleaf, dist = 10^5, 10^2, 10, 20, 32, L2Distance()
     db = StrideMatrixDatabase(rand(Float32, dim, n))
     queries = StrideMatrixDatabase(rand(Float32, dim, m))
     optqueries = StrideMatrixDatabase(rand(Float32, dim, 10))
     E = ExhaustiveSearch(; dist, db)
     bruteforcesearchtime = @elapsed Igold, Dgold = searchbatch(E, queries, k)
-    minleaf = 100
     numqueries = 16  # numqueries for optimize!
     verbose = false
 
@@ -26,24 +24,43 @@ using Test
         @info "Sat"
         sat = Sat(db; dist)
         @time index!(sat; sortsat, minleaf)
+        @show sum(c !== nothing for c in sat.children)
         # @show sat
         # checking that the database size and the number of inserted elements is consistent
         @test n == 1 + sum(length(C) for C in sat.children if C !== nothing)
         # checking that cov is consistent with children
         #@test all((C === nothing ? sat.cov[i] < 0 : sat.cov[i] > 0) for (i, C) in enumerate(sat.children))
         @test all(sat.cov[i] >= 0  for (i, C) in enumerate(sat.children))
-        Isat, Dsat = searchbatch(sat, queries, k)
-        searchtime = @elapsed Isat, Dsat = searchbatch(sat, queries, k)
+        @time Isat, _ = searchbatch(sat, queries, k)
+        searchtime = @elapsed Isat, _ = searchbatch(sat, queries, k)
         recall = macrorecall(Igold, Isat)
         @test recall >= e.exact
-        continue
+
+        psat = permutesat(sat)
+        @test isperm(psat.π)
+        @time Ip, _ = searchbatch(psat, queries, k)
+        psearchtime = @elapsed Ip, _ = searchbatch(psat, queries, k)
+        precall = macrorecall(Igold, Ip)
+        @test precall >= e.exact
+        
         
         asat = PruningSat(sat)
         alist = optimize!(asat, MinRecall(0.9); numqueries, verbose, ksearch=k, queries=optqueries)
+        ## asat = PruningSat(psat.index)
+        ## alist = optimize!(asat, MinRecall(0.9); numqueries, verbose, ksearch=k, queries=optqueries)
+        ## asat = PermutedSearchIndex(index=asat, π=psat.π, π′=psat.π′)
         Ia, _ = searchbatch(asat, queries, k)
         asearchtime = @elapsed Ia, _ = searchbatch(asat, queries, k)
         arecall = macrorecall(Igold, Ia)
         @test arecall > e.arecall ## it should be close to 0.9, but anyway errors will show very low recall
+
+        pasat = PruningSat(psat.index)
+        palist = optimize!(pasat, MinRecall(0.9); numqueries, verbose, ksearch=k, queries=optqueries)
+        pasat = PermutedSearchIndex(index=pasat, π=psat.π, π′=psat.π′)
+        Ipa, _ = searchbatch(pasat, queries, k)
+        pasearchtime = @elapsed Ipa, _ = searchbatch(pasat, queries, k)
+        parecall = macrorecall(Igold, Ipa)
+        @test parecall > e.arecall ## it should be close to 0.9, but anyway errors will show very low recall
 
         bsat = BeamSearchSat(sat)
         blist = optimize!(bsat, MinRecall(0.9); numqueries, verbose, ksearch=k, queries=optqueries)
@@ -52,6 +69,8 @@ using Test
         bsearchtime = @elapsed Ib, _ = searchbatch(bsat, queries, k)
         brecall = macrorecall(Igold, Ib)
         @test brecall > e.brecall
+        
+        #=
         @info "multisat"
 
         @time csat = BeamSearchMultiSat([index!(Sat(db; dist, root=rand(1:n)); sortsat, minleaf) for _ in 1:4])
@@ -62,7 +81,7 @@ using Test
         csearchtime = @elapsed Ic, _ = searchbatch(csat, queries, k)
         crecall = macrorecall(Igold, Ic)
         @show crecall > e.crecall
-
+        =#
         @info "SearchGraph"
         @time G = index!(SearchGraph(; db, dist, verbose))
         # @show [s.root for s in csat.sat]
@@ -75,9 +94,11 @@ using Test
 
         @info "------------ brute force: $bruteforcesearchtime -- sort sat: $(typeof(sortsat)) "
         @info " exact sat:" recall searchtime (bruteforcesearchtime / searchtime)
+        @info " permuted exact sat:" precall psearchtime (bruteforcesearchtime / psearchtime)
         @info " sat with probabilistic spell:" arecall asearchtime (bruteforcesearchtime / asearchtime) first(alist)
+        @info " perm sat with probabilistic spell:" parecall pasearchtime (bruteforcesearchtime / pasearchtime) first(palist)
         @info " sat with beam search:" brecall bsearchtime (bruteforcesearchtime / bsearchtime) first(blist)
-        @info " multi sat with beam search:" crecall csearchtime (bruteforcesearchtime / csearchtime) first(clist)
+        #@info " multi sat with beam search:" crecall csearchtime (bruteforcesearchtime / csearchtime) first(clist)
         @info " search graph:" grecall gsearchtime (bruteforcesearchtime / gsearchtime) first(glist)
     end
 end
