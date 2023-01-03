@@ -43,7 +43,6 @@ using Test
         precall = macrorecall(Igold, Ip)
         @test precall >= e.exact
         
-        
         asat = PruningSat(sat)
         alist = optimize!(asat, MinRecall(0.9); numqueries, verbose, ksearch=k, queries=optqueries)
         ## asat = PruningSat(psat.index)

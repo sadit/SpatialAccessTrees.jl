@@ -13,10 +13,12 @@ using SimilaritySearch:
 
 
 const BeamKnnResult = [KnnResult(32)]  # see __init__ function
+const SearchQueue = [UInt32[]]
 
 function __init__()
     for _ in 2:Threads.nthreads()
         push!(BeamKnnResult, KnnResult(32))
+        push!(SearchQueue, copy(first(SearchQueue)))
     end
 end
 

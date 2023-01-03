@@ -21,6 +21,7 @@ function satpermutation!(π, sat::Sat)
     p = 1
     π[p] = sat.root
     cand = [sat.root]
+    sizehint!(cand, ceil(Int, sqrt(length(π))))
 
     while length(cand) > 0
         i = popfirst!(cand)
@@ -40,6 +41,17 @@ end
 
 satpermutation(sat::Sat) = satpermutation!(Vector{UInt32}(undef, length(sat)), sat)
 
+"""
+    permutesat(sat::Sat, π=satpermutation(sat), π′=invperm(π))
+
+Permute sat to optimize cache accesses patterns; the database is also copied and permuted.
+The permuted index is stored in a `PermutedSearchIndex` struct to allow plug and play index interchange.
+
+# Arguments:
+- `sat`: Input `Sat` index.
+- `π`: Permutation.
+- `π′`: Inverse permutation.
+"""
 function permutesat(sat::Sat, π=satpermutation(sat), π′=invperm(π))
     db = MatrixDatabase(SubDatabase(database(sat), π))
     children = similar(sat.children)
