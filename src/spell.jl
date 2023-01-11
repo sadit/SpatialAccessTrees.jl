@@ -49,32 +49,26 @@ function explore_node!(sat::Sat, q, p::Integer, res::KnnResult, queue::Vector)
 end
 
 function pruningsearchtree(sat::Sat, q, p::Integer, res::KnnResult, factor::Float32)
-    cost = 1
-    queue = SearchQueue[Threads.threadid()]
-    empty!(queue)
+    cost = 0
+    queue = getsearchqueue()
     push!(queue, p)
     dist = distance(sat)
-
-    f = Inf32
+    
     @inbounds while length(queue) > 0
         p = pop!(queue)
         dqp = evaluate(dist, q, database(sat, p))
         cost += 1
         push!(res, p, dqp)
 
-        #if sat.children[p] !== nothing # inner node
-            if length(res) < maxlength(res) || dqp < factor * maximum(res) + sat.cov[p]
-                cost += explore_node!(sat, q, p, res, queue)
-                #append!(queue, sat.children[p])
-            end
-        #end
+        if length(res) < maxlength(res) || dqp < factor * maximum(res) + sat.cov[p]
+            cost += explore_node!(sat, q, p, res, queue)
+        end
     end
 
     cost
 end
 
-
-function pruningsearchtree_(sat::Sat, q, p::Integer, res::KnnResult, factor::Float32)
+#=function pruningsearchtree(sat::Sat, q, p::Integer, res::KnnResult, factor::Float32)
     cost = 1
     dist = distance(sat)
     dqp = evaluate(dist, q, database(sat, p))
@@ -89,7 +83,7 @@ function pruningsearchtree_(sat::Sat, q, p::Integer, res::KnnResult, factor::Flo
     end
 
     cost
-end
+end=#
 
 function search(psat::PruningSat, q::T, res::KnnResult; pools=nothing) where T
     cost = pruningsearchtree(psat.sat, q, psat.sat.root, res, psat.pruning.factor)

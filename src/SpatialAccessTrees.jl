@@ -13,7 +13,7 @@ using SimilaritySearch:
 
 
 const BeamKnnResult = [KnnResult(32)]  # see __init__ function
-const SearchQueue = [UInt32[]]
+const SearchQueue = [Vector{UInt32}(undef, 64)]
 
 function __init__()
     for _ in 2:Threads.nthreads()
@@ -21,6 +21,13 @@ function __init__()
         push!(SearchQueue, copy(first(SearchQueue)))
     end
 end
+
+function getsearchqueue()
+    queue = SearchQueue[Threads.threadid()]
+    empty!(queue)
+    queue
+end
+
 
 include("sat.jl")
 include("bs.jl")

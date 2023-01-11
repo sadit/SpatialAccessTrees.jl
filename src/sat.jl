@@ -1,11 +1,24 @@
 # this file is part of SpatialAccessTrees.jl
 
-export Sat, RandomSortSat, ProximalSortSat, DistalSortSat, search, searchbatch, index!, satpermutation, satpermutation!, permute
+export Sat, SatInitialPartition, RandomInitialPartition,
+    RandomSortSat, ProximalSortSat, DistalSortSat,
+    search, searchbatch, index!, satpermutation, satpermutation!, permute
+using Polyester
 
 abstract type AbstractSortSat end
 struct RandomSortSat <: AbstractSortSat end
 struct ProximalSortSat <: AbstractSortSat end
 struct DistalSortSat <: AbstractSortSat end
+
+abstract type AbstractInitialPartition end
+
+struct SatInitialPartition <: AbstractInitialPartition end
+
+struct RandomInitialPartition <: AbstractInitialPartition
+    nparts::Int
+    shuffle::Bool
+    RandomInitialPartition(; nparts=max(4, Threads.nthreads()), shuffle=false) = new(nparts, shuffle)
+end
 
 """
     struct Sat{DT<:SemiMetric,DBT<:AbstractDatabase} <: AbstractSearchIndex
@@ -26,6 +39,24 @@ struct Sat{DT<:SemiMetric,DBT<:AbstractDatabase} <: AbstractSearchIndex
     # parents::Vector{UInt32}
     children::Vector{Union{Nothing,Vector{UInt32}}}
     cov::Vector{Float32} # leafs: d(parent, leaf), internal: max {d(parent, u) | u \in children(parent)}
+end
+
+function Base.show(io::IO, sat::Sat)
+    io = IOContext(io, :compact => true, :limit => true)
+    println(io, "{\n  ", typeof(sat), " n=", length(sat), "\n")
+
+    for j in eachindex(sat.children)
+        print(io, "  [", j, "] ")
+        show(io, sat.children[j])
+        print(io, "\n")
+        if j >= 30
+            println(io, "...")
+            break
+        end
+    end
+
+    println(io, sat.cov)
+    println(io, "}")
 end
 
 function Sat(
@@ -60,7 +91,6 @@ function Sat(db::AbstractDatabase; dist::SemiMetric=L2Distance(), root=1)
     # P = zeros(UInt32, n)
     C = Union{Nothing,Vector{UInt32}}[nothing for _ in 1:n]
     cov = Vector{Float32}(undef, n)
-    #Sat(dist, db, convert(UInt32, root), P, C, cov)
     Sat(dist, db, convert(UInt32, root), C, cov)
 end
 
@@ -71,16 +101,19 @@ end
 @inline Base.length(sat::Sat) = length(sat.cov)
 
 """
-    index!(
-        sat::Sat;
-        sortsat::AbstractSortSat=ProximalSortSat(),
-        minleaf::Int=log2(ceil(database(sat)))
-    )
+    index!(sat::Sat; <kwargs...>)
+    index!(sat::Sat, ipart::SatInitialPartition; <kwargs...>)
+    index!(sat::Sat, ipart::RandomInitialPartition; <kwargs...>)
 
-Performs the indexing of the referenced dataset in the spatial access tree.
+Performs the indexing of the referenced dataset in the tree. It supports limited forms of multithreading, induced by initial partitioning schemes.
 
 # Arguments
-- `sat`: The metric data structure
+- `sat`: The metric data structure.
+- `ipart`: initial partitioning scheme for the tree. It supports the following kinds of objects:
+    - `SatInitialPartition()`: Traditional construction, default value. Each part is a SAT partition and will be processed by a thread on multithreading setups.
+    - `RandomInitialPartition(nparts=Threads.nthreads(), shuffle=false)`:
+        construction that divides the dataset (randomly if `suffle=true`) in `nparts` disjoint parts. The resulting structure violates the SAT partitioning in a whole
+        and creates a kind of SAT forest that are fine SAT partitions. Useful to limit the height of the tree and for multiprocessing purporses, i.e., each part will be processed by a thread.
 
 # Keyword arguments
 - `sortsat`: The strategy to create the spatial access tree, it heavily depends on the order of elements while it is build. It accepts:
@@ -90,25 +123,29 @@ Performs the indexing of the referenced dataset in the spatial access tree.
 - `minleaf`: Minimum number of children to perform a spatial access separation (half space partitioning)
 """
 function index!(
-        sat::Sat;
+        sat::Sat,
+        ::SatInitialPartition;
         sortsat::AbstractSortSat=ProximalSortSat(),
         minleaf::Int=log2(ceil(database(sat)))
     )
     n = length(sat)
-    D = Vector{Tuple{Float32,UInt32}}(undef, n)
     p::UInt32 = sat.root
-    sat.children[p] = collect(Iterators.flatten((1:p-1, p+1:n)))
-    # sat.parents[p] = 0 # root has no parent
-    sat.cov[p] = 0f0 # initializes cov for n = 1
-    queue = UInt32[p]
-    
-    while length(queue) > 0
-        p = pop!(queue)
-        index_sat_neighbors!(sat, sat.children[p], D, p, sortsat, minleaf)
-        for c in sat.children[p]
-            C = sat.children[c]
-            if C !== nothing
-                push!(queue, c)
+    sat.children[p] = collect(UInt32, Iterators.flatten((1:p-1, p+1:n)))
+
+    if Threads.nthreads() == 1
+        D = Vector{Tuple{Float32,UInt32}}(undef, n)
+        index_loop!(sat, sortsat, D, minleaf, UInt32[p])
+    else
+        let D = Vector{Tuple{Float32,UInt32}}(undef, n)
+            index_sat_neighbors!(sat, sortsat, sat.children[p], p, D, 0)
+        end
+        C = sat.children[p]
+
+        @batch per=thread minbatch=1 for i in eachindex(C)
+            c = C[i]
+            if sat.children[c] !== nothing
+                D = Vector{Tuple{Float32,UInt32}}(undef, length(sat.children[c]))
+                index_loop!(sat, sortsat, D, minleaf, UInt32[c])
             end
         end
     end
@@ -116,31 +153,68 @@ function index!(
     sat
 end
 
-function Base.show(io::IO, sat::Sat)
-    io = IOContext(io, :compact => true, :limit => true)
-    println(io, "{\n  ", typeof(sat), " n=", length(sat), "\n")
+function index!(
+        sat::Sat;
+        sortsat::AbstractSortSat=ProximalSortSat(),
+        minleaf::Int=log2(ceil(database(sat)))
+    )
+    index!(sat, SatInitialPartition(); sortsat, minleaf)
+end
 
-    for j in eachindex(sat.children)
-        print(io, "  [", j, "] ")
-        show(io, sat.children[j])
-        print(io, "\n")
-        if j >= 30
-            println(io, "...")
-            break
+function index!(
+        sat::Sat,
+        ipart::RandomInitialPartition;
+        sortsat::AbstractSortSat=ProximalSortSat(),
+        minleaf::Int=log2(ceil(database(sat)))
+    )
+    n = length(sat)
+    nparts = 8ipart.nparts > n ? ceil(Int, ipart.nparts / 8) : ipart.nparts
+    nparts == 1 && return index!(sat, SatInitialPartition(); sortsat, minleaf)
+
+    p::UInt32 = sat.root    
+    P = collect(UInt32, Iterators.flatten((1:p-1, p+1:n)))
+    n = length(P)
+    ipart.shuffle && shuffle!(P)
+    sat.children[p] = P[1:nparts]
+    m = ceil(Int, (n - nparts) / nparts)
+
+    @batch per=thread minbatch=1 for i in 1:nparts
+        sp = nparts + (i-1) * m
+        c = P[i]
+        C = sat.children[c] = P[sp+1:min(n, sp+m)]
+        D = Vector{Tuple{Float32,UInt32}}(undef, length(C))
+        index_loop!(sat, sortsat, D, minleaf, UInt32[c])
+    end
+
+    cov = sat.cov
+    cov[p] = 0f0
+    for c in sat.children[p]
+        cov[p] = max(cov[p], abs(cov[c]))
+    end
+
+    sat
+end
+
+function index_loop!(sat::Sat, sortsat::AbstractSortSat, D::AbstractVector, minleaf::Int, queue::Vector{UInt32})
+    while length(queue) > 0
+        p = pop!(queue)
+        index_sat_neighbors!(sat, sortsat, sat.children[p], p, D, minleaf)
+        @assert sat.children[p] !== nothing
+        for c in sat.children[p]
+            C = sat.children[c]
+            C !== nothing && push!(queue, c)
         end
     end
 
-    println(io, sat.cov)
-    println(io, "}")
+    sat
 end
 
-function index_sat_neighbors!(sat::Sat, C::Nothing, D, p::UInt32, sortsat::AbstractSortSat)
+function index_sat_neighbors!(sat::Sat, sortsat::AbstractSortSat, C::Nothing, p::UInt32, D::Vector, minleaf::Integer)
     # do nothing
 end
 
-function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::AbstractSortSat, minleaf::Integer)
+function index_sat_neighbors!(sat::Sat, sortsat::AbstractSortSat, C::AbstractVector, p::UInt32, D::Vector, minleaf::Integer)
     # note: D is a cache of distances and objects, it is used in two ways in this function
-    C = sat.children[p]
     n = length(C)
 
     resize!(D, n)
@@ -149,7 +223,6 @@ function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::Abstra
 
     # computing distance to its parent (stored in D)
     sat.cov[p] = 0f0
-    #L = Threads.SpinLock()
 
     for i in eachindex(C) #(i, c) in enumerate()
         c = C[i]
@@ -160,20 +233,20 @@ function index_sat_neighbors!(sat::Sat, C::Vector, D, p::UInt32, sortsat::Abstra
     end
 
     T = typeof(sortsat)
-    sort!(D, by=first)
-
+    T === RandomSortSat && minleaf == 0 || sort!(D, by=first)
     minleaf = min(n, minleaf)
-    @inbounds for i in 1:minleaf
-        (d_, i_) = D[i]
-        D[i] = (-d_, i_)
+
+    if minleaf > 0
+        @inbounds for i in 1:minleaf  # mandatory leafs
+            (d_, i_) = D[i]
+            D[i] = (-d_, i_)
+        end
     end
 
-    if minleaf < n
-        if T === RandomSortSat
-            shuffle!(D)
-        elseif T === DistalSortSat
-            reverse!(D)
-        end
+    if T === RandomSortSat
+        shuffle!(D)
+    elseif T === DistalSortSat
+        reverse!(D)
     end
 
     # computing nearest neighbors of $child \in D$ (using previous D and storing the new set on D)
