@@ -117,15 +117,14 @@ Performs the indexing of the referenced dataset in the tree. It supports limited
 
 # Keyword arguments
 - `sortsat`: The strategy to create the spatial access tree, it heavily depends on the order of elements while it is build. It accepts:
-   - `RandomSortSat()`: children are randomized.
+   - `RandomSortSat()`: children are randomized (default value)
    - `ProximalSortSat()`: classical approach, near elements are put first.
    - `DistalSortSat()`: recent approach, distant elements are put first.
 - `minleaf`: Minimum number of children to perform a spatial access separation (half space partitioning)
 """
 function index!(
-        sat::Sat,
-        ::SatInitialPartition;
-        sortsat::AbstractSortSat=ProximalSortSat(),
+        sat::Sat, ipart::SatInitialPartition=SatInitialPartition();
+        sortsat::AbstractSortSat=RandomSortSat(),
         minleaf::Int=log2(ceil(database(sat)))
     )
     n = length(sat)
@@ -154,17 +153,9 @@ function index!(
 end
 
 function index!(
-        sat::Sat;
-        sortsat::AbstractSortSat=ProximalSortSat(),
-        minleaf::Int=log2(ceil(database(sat)))
-    )
-    index!(sat, SatInitialPartition(); sortsat, minleaf)
-end
-
-function index!(
         sat::Sat,
         ipart::RandomInitialPartition;
-        sortsat::AbstractSortSat=ProximalSortSat(),
+        sortsat::AbstractSortSat=RandomSortSat(),
         minleaf::Int=log2(ceil(database(sat)))
     )
     n = length(sat)
