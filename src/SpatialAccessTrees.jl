@@ -6,7 +6,7 @@ using SimilaritySearch, Parameters, SearchModels, Random, Polyester
 
 import SimilaritySearch:
     search, index!, getpools, getknnresult, database, distance,
-    optimization_space, optimize!, setconfig!, runconfig, mutate, combine
+    optimization_space, optimize!, allknn_single_search, setconfig!, runconfig0, runconfig, mutate, combine
 
 using SimilaritySearch:
     ErrorFunction, AbstractSolutionSpace, GlobalVisitedVertices, visit!, check_visited_and_visit!, getminbatch
@@ -34,7 +34,8 @@ include("spell.jl")
 include("spellopt.jl")
 include("multibs.jl")
 include("permsat.jl")
-include("allknn.jl")
+include("parsat.jl")
+include("parsatopt.jl")
 
 end
  

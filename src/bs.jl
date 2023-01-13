@@ -69,7 +69,7 @@ optimization_space(::BeamSearchSat) =
         bsize = 8:16:64,
         Δ = [0.8, 1.0, 1.3, 1.5],
         bsize_scale = (s=1.5, p1=0.5, p2=0.5, lower=4, upper=256),
-        Δ_scale = (s=1.1, p1=0.5, p2=0.5, lower=0.5, upper=3.0)
+        Δ_scale = (s=1.2, p1=0.5, p2=0.5, lower=0.5, upper=3.0)
     )
 
 function optimize!(
