@@ -28,13 +28,13 @@ function getsearchqueue()
     queue
 end
 
-
 include("sat.jl")
 include("bs.jl")
 include("spell.jl")
 include("spellopt.jl")
 include("multibs.jl")
 include("permsat.jl")
+include("allknn.jl")
 
 end
  
