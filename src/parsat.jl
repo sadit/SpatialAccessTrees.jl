@@ -78,10 +78,12 @@ Solves a single query, ``i``th object, specific solution for `allknn_single_sear
 """
 function travelsat(psat::ParSat, i::Integer, res::KnnResult, c::ParSatConfig=psat.config)
     q = database(psat, i)
-    cost = travelsat_(psat.sat, q, ith_par(psat.parents, i, c.depth), res, c.factor)
+    p = ith_par(psat.parents, i, c.depth)
+    cost = pruningsearchtree(psat.sat, q, p, res, c.factor)
     (; res, cost)
 end
 
+#=
 function travelsat_(sat::Sat, q, p::Integer, res::KnnResult, factor::Float32)
     dist = distance(sat)
     cost = 0
@@ -96,4 +98,4 @@ function travelsat_(sat::Sat, q, p::Integer, res::KnnResult, factor::Float32)
     end
 
     cost + length(C)
-end
+end=#
