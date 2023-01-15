@@ -34,8 +34,10 @@ include("spell.jl")
 include("spellopt.jl")
 include("multibs.jl")
 include("permsat.jl")
-include("parsat.jl")
-include("parsatopt.jl")
+include("prunparsat.jl")
+include("prunparsatopt.jl")
+include("bsparsat.jl")
+include("bsparsatopt.jl")
 
 end
  

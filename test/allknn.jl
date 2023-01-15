@@ -11,9 +11,21 @@ using Test
     numqueries = 16  # numqueries for optimize!
     verbose = false
     sortsat = RandomSortSat()
-
+    println(stderr, "================= PrunParSat ================")
     let
-        buildtime = @elapsed psat = ParSat(index!(Sat(db; dist); sortsat, minleaf))
+        buildtime = @elapsed psat = PrunParSat(index!(Sat(db; dist); sortsat, minleaf))
+        blist = optimize!(psat, MinRecall(0.9); verbose=false, numqueries)
+        println(stderr, first(blist))
+        #buildtime = @elapsed psat = index!(Sat(db; dist); sortsat, minleaf)
+        I, _ = allknn(psat, k)
+        searchtime = @elapsed I, _ = allknn(psat, k)
+        @show bruteforcesearchtime bruteforcesearchtime / searchtime
+        @show searchtime buildtime macrorecall(Igold, I)
+    end
+
+    println(stderr, "================= BeamSearchParSat ================")
+    let
+        buildtime = @elapsed psat = BeamSearchParSat(index!(Sat(db; dist); sortsat, minleaf))
         blist = optimize!(psat, MinRecall(0.9); verbose=false, numqueries)
         println(stderr, first(blist))
         #buildtime = @elapsed psat = index!(Sat(db; dist); sortsat, minleaf)

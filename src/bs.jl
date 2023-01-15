@@ -29,17 +29,18 @@ end
 @inline distance(bs::BeamSearchSat) = distance(bs.sat)
 @inline Base.length(bs::BeamSearchSat) = length(bs.sat)
 
-function beamsearch(sat::Sat, bsize::Int32, Δ::Float32, q, res::KnnResult)
+beamsearch(sat::Sat, bsize::Int32, Δ::Float32, q, res::KnnResult) = beamsearch(sat, sat.root, bsize, Δ, q, res)
+
+function beamsearch(sat::Sat, root::UInt32, bsize::Int32, Δ::Float32, q, res::KnnResult)
     beam = reuse!(BeamKnnResult[Threads.threadid()], bsize)
     # beam = KnnResult(bs.bsize)
     dist = distance(sat)
-    root = sat.root
     cost = 1
     d = evaluate(dist, q, database(sat, root))
     push!(res, root, d)
     sat.children[root] !== nothing && push!(beam, root, d)
 
-    bsize = maxlength(beam)
+    # bsize = maxlength(beam)
     sp = 1
 
     @inbounds while sp <= length(beam)
