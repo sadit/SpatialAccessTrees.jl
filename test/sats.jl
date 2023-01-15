@@ -16,12 +16,12 @@ using Test
     verbose = false
 
     for e in [
-            (ipart=SatInitialPartition(), sortsat=ProximalSortSat(), exact=0.9999, arecall=0.8, brecall=0.3, crecall=0.5),
-            (ipart=SatInitialPartition(), sortsat=DistalSortSat(), exact=0.9999, arecall=0.8, brecall=0.6, crecall=0.6),
+            (ipart=SatInitialPartition(), sortsat=ProximalSortSat(), exact=0.9999, arecall=0.75, brecall=0.3, crecall=0.5),
+            (ipart=SatInitialPartition(), sortsat=DistalSortSat(), exact=0.9999, arecall=0.75, brecall=0.6, crecall=0.6),
             # it seems that we destroy some properties used by BeamSearchSat using RandomInitialPartition
-            (ipart=RandomInitialPartition(nparts=64, shuffle=false), sortsat=RandomSortSat(), exact=0.9999, arecall=0.8, brecall=0.1, crecall=0.6),
-            (ipart=RandomInitialPartition(nparts=64, shuffle=true), sortsat=RandomSortSat(), exact=0.9999, arecall=0.8, brecall=0.1, crecall=0.6),
-            (ipart=SatInitialPartition(), sortsat=RandomSortSat(), exact=0.9999, arecall=0.8, brecall=0.6, crecall=0.6),
+            (ipart=RandomInitialPartition(nparts=64, shuffle=false), sortsat=RandomSortSat(), exact=0.9999, arecall=0.75, brecall=0.1, crecall=0.6),
+            (ipart=RandomInitialPartition(nparts=64, shuffle=true), sortsat=RandomSortSat(), exact=0.9999, arecall=0.75, brecall=0.1, crecall=0.6),
+            (ipart=SatInitialPartition(), sortsat=RandomSortSat(), exact=0.9999, arecall=0.75, brecall=0.6, crecall=0.6),
         ]
         sortsat, ipart = e.sortsat, e.ipart
         @info "============================= $ipart -- $sortsat -- minleaf=$minleaf ================"
