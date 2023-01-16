@@ -27,13 +27,12 @@ end
 @inline Base.length(psat::BeamSearchParSat) = length(psat.sat)
 search(psat::BeamSearchParSat, q, res::KnnResult; pools=nothing) = search(psat.sat, q, res; pools)
 
-
 """
     allknn_single_search(psat::BeamSearchParSat, i::Integer, res::KnnResult, pools)
 
 Solves a single query, ``i``th object, called from `allknn` function
 """
-allknn_single_search(psat::BeamSearchParSat, i::Integer, res::KnnResult, pools) = beamsearch(psat, i, res, psat.config)
+allknn_single_search(psat::BeamSearchParSat, i::Integer, res::KnnResult, pools) = beamsearch(psat, convert(UInt32, i), res, psat.config)
  
 """
     beamsearch(psat::BeamSearchParSat, i::Integer, res::KnnResult, c::BeamSearchParSatConfig)
@@ -41,7 +40,7 @@ allknn_single_search(psat::BeamSearchParSat, i::Integer, res::KnnResult, pools) 
 Solves a single query, ``i``th object, specific solution for `allknn_single_search`, also used for
 `runconfig`.
 """
-function beamsearch(psat::BeamSearchParSat, i::Integer, res::KnnResult, c::BeamSearchParSatConfig)
+function beamsearch(psat::BeamSearchParSat, i::UInt32, res::KnnResult, c::BeamSearchParSatConfig)
     q = database(psat, i)
     p = ith_par(psat.parents, i, c.depth)
     beamsearch(psat.sat, p, c.bs.bsize, c.bs.Δ, q, res)

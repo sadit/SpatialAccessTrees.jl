@@ -38,5 +38,5 @@ function setconfig!(config::BeamSearchParSatConfig, psat::BeamSearchParSat, perf
 end
 
 function runconfig0(config::BeamSearchParSatConfig, psat::BeamSearchParSat, queries::SubDatabase, i::Integer, res::KnnResult, pools)
-    beamsearch(psat, queries.map[i], res, config)
+    beamsearch(psat, convert(UInt32, queries.map[i]), res, config)
 end

@@ -279,7 +279,6 @@ isleaf(sat::Sat, i::Integer) = sat.cov[i] < 0
 isinner(sat::Sat, i::Integer) = sat.cov[i] >= 0
 isroot(sat::Sat, i::Integer) = sat.root == i
 =#
-
 function searchtree(sat::Sat, q, p::Integer, res::KnnResult)
     cost = 1
     dist = distance(sat)
@@ -288,7 +287,8 @@ function searchtree(sat::Sat, q, p::Integer, res::KnnResult)
 
     if sat.children[p] !== nothing # inner node
         if length(res) < maxlength(res) || dqp < maximum(res) + sat.cov[p]
-            for c in sat.children[p]
+            C = sat.children[p]::Vector{UInt32}
+            for c in C
                 cost += searchtree(sat, q, c, res)
             end
         end

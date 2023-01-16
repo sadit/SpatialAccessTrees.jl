@@ -29,8 +29,6 @@ end
 @inline distance(bs::BeamSearchSat) = distance(bs.sat)
 @inline Base.length(bs::BeamSearchSat) = length(bs.sat)
 
-beamsearch(sat::Sat, bsize::Int32, Δ::Float32, q, res::KnnResult) = beamsearch(sat, sat.root, bsize, Δ, q, res)
-
 function beamsearch(sat::Sat, root::UInt32, bsize::Int32, Δ::Float32, q, res::KnnResult)
     beam = reuse!(BeamKnnResult[Threads.threadid()], bsize)
     # beam = KnnResult(bs.bsize)
@@ -46,8 +44,8 @@ function beamsearch(sat::Sat, root::UInt32, bsize::Int32, Δ::Float32, q, res::K
     @inbounds while sp <= length(beam)
         i_ = getid(beam, sp)
         sp += 1
-
-        for c in sat.children[i_]
+        C = sat.children[i_]::Vector{UInt32}
+        for c in C
             d = evaluate(dist, q, database(sat, c))
             cost += 1
             push!(res, c, d)
@@ -61,7 +59,7 @@ function beamsearch(sat::Sat, root::UInt32, bsize::Int32, Δ::Float32, q, res::K
     (; res, cost)
 end
 
-search(bs::BeamSearchSat, q, res::KnnResult; pools=nothing) = beamsearch(bs.sat, bs.bs.bsize, bs.bs.Δ, q, res)
+search(bs::BeamSearchSat, q, res::KnnResult; pools=nothing) = beamsearch(bs.sat, bs.sat.root, bs.bs.bsize, bs.bs.Δ, q, res)
 
 ## Optimization
 
@@ -101,5 +99,5 @@ function setconfig!(bs::BeamSearch, index::BeamSearchSat, perf)
 end
 
 function runconfig(bs::BeamSearch, index::BeamSearchSat, q, res::KnnResult, pools)
-    beamsearch(index.sat, bs.bsize, bs.Δ, q, res)
+    beamsearch(index.sat, index.sat.root, bs.bsize, bs.Δ, q, res)
 end

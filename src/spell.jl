@@ -32,10 +32,13 @@ end
 @inline distance(psat::PruningSat) = distance(psat.sat)
 @inline Base.length(psat::PruningSat) = length(psat.sat)
 
-function explore_node!(sat::Sat, q, p::Integer, res::KnnResult, queue::Vector)
+
+explore_node!(sat::Sat, q, ::Nothing, res::KnnResult, queue::Vector) = 0
+
+function explore_node!(sat::Sat, q, C::Vector, res::KnnResult, queue::Vector)
     cost = 0
     dist = distance(sat)
-    for c in sat.children[p]
+    for c in C
         if sat.children[c] === nothing
             d = evaluate(dist, q, database(sat, c))
             cost += 1
@@ -61,7 +64,7 @@ function pruningsearchtree(sat::Sat, q, p::Integer, res::KnnResult, factor::Floa
         push!(res, p, dqp)
 
         if length(res) < maxlength(res) || dqp < factor * maximum(res) + sat.cov[p]
-            cost += explore_node!(sat, q, p, res, queue)
+            cost += explore_node!(sat, q, sat.children[p], res, queue)
         end
     end
 
