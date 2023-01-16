@@ -25,7 +25,7 @@ function satpermutation!(π, sat::Sat)
 
     while length(cand) > 0
         i = popfirst!(cand)
-        for C in sat.children[i]
+        for C in (sat.children[i])::Vector{UInt32}
             for c in C
                 p += 1
                 π[p] = c

@@ -179,7 +179,7 @@ function index!(
 
     cov = sat.cov
     cov[p] = 0f0
-    for c in sat.children[p]
+    for c in (sat.children[p])::Vector{UInt32}
         cov[p] = max(cov[p], abs(cov[c]))
     end
 
@@ -190,8 +190,8 @@ function index_loop!(sat::Sat, sortsat::AbstractSortSat, D::AbstractVector, minl
     while length(queue) > 0
         p = pop!(queue)
         index_sat_neighbors!(sat, sortsat, sat.children[p], p, D, minleaf)
-        @assert sat.children[p] !== nothing
-        for c in sat.children[p]
+        # @assert sat.children[p] !== nothing
+        @inbounds for c in (sat.children[p])::Vector{UInt32}
             C = sat.children[c]
             C !== nothing && push!(queue, c)
         end
