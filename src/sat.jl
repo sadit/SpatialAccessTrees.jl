@@ -247,12 +247,12 @@ function index_sat_neighbors!(sat::Sat, sortsat::AbstractSortSat, C::AbstractVec
         d_ <= 0  && continue # negative distances encode mandatory leafs, see next outside-for-loop
 
         res = getknnresult(1)
-        push!(res, p, d_)  # insert parent
+        push_item!(res, IdWeight(p, d_))  # insert parent
         child = database(sat, i_)
 
         for j in C
             d = evaluate(dist, child, database(sat, j))
-            push!(res, j, d)
+            push_item!(res, IdWeight(j, d))
         end
 
         nn = argmin(res)
@@ -283,7 +283,7 @@ function searchtree(sat::Sat, q, p::Integer, res::KnnResult)
     cost = 1
     dist = distance(sat)
     dqp = evaluate(dist, q, database(sat, p))
-    push!(res, p, dqp)
+    push_item!(res, IdWeight(p, dqp))
 
     if sat.children[p] !== nothing # inner node
         if length(res) < maxlength(res) || dqp < maximum(res) + sat.cov[p]

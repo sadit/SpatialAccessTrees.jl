@@ -35,23 +35,23 @@ function beamsearch(sat::Sat, root::UInt32, bsize::Int32, Δ::Float32, q, res::K
     dist = distance(sat)
     cost = 1
     d = evaluate(dist, q, database(sat, root))
-    push!(res, root, d)
-    sat.children[root] !== nothing && push!(beam, root, d)
+    push_item!(res, IdWeight(root, d))
+    sat.children[root] !== nothing && push_item!(beam, IdWeight(root, d))
 
     # bsize = maxlength(beam)
     sp = 1
 
     @inbounds while sp <= length(beam)
-        i_ = getid(beam, sp)
+        i_ = beam[sp].id
         sp += 1
         C = sat.children[i_]::Vector{UInt32}
         for c in C
             d = evaluate(dist, q, database(sat, c))
             cost += 1
-            push!(res, c, d)
+            push_item!(res, IdWeight(c, d))
         
             if sat.children[c] !== nothing && d <= Δ * maximum(res)
-                push!(beam, c, d; sp, k=bsize+sp)
+                push_item!(beam, IdWeight(c, d), sp)
             end
         end
     end

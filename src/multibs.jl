@@ -32,7 +32,7 @@ function beamsearchmultisat(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, 
     dist = distance(sat)
     cost = 1
     vstate = reuse!(GlobalVisitedVertices[Threads.threadid()], length(sat))
-    push!(res, sat.root, evaluate(dist, q, database(sat, sat.root)))
+    push_item!(res, IdWeight(sat.root, evaluate(dist, q, database(sat, sat.root))))
     beam = reuse!(BeamKnnResult[Threads.threadid()], bsize)
     sp = 1
 
@@ -42,13 +42,13 @@ function beamsearchmultisat(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, 
         for i in eachindex(satarr)
             sat = satarr[i]
             if sat.children[p] !== nothing
-                push!(beam, p, d_; sp, k=bsize+sp)
+                push_item!(beam, IdWeight(p, d_), sp)
                 break
             end
         end
 
         @inbounds while sp <= length(beam)
-            i_ = getid(beam, sp)
+            i_ = beam[sp].id
             sp += 1
             C = sat.children[i_]
 
@@ -56,10 +56,10 @@ function beamsearchmultisat(satarr::Vector{SatType}, bsize::Int32, Δ::Float32, 
                 check_visited_and_visit!(vstate, convert(UInt64, c)) && continue
                 d = evaluate(dist, q, database(sat, c))
                 cost += 1
-                push!(res, c, d)
+                push_item!(res, IdWeight(c, d))
 
                 if sat.children[c] !== nothing && d <= Δ * maximum(res)
-                    push!(beam, c, d; sp, k=bsize+sp)
+                    push_item!(beam, IdWeight(c, d), sp)
                 end
             end
         end

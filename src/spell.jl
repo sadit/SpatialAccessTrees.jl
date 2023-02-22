@@ -42,7 +42,7 @@ function explore_node!(sat::Sat, q, C::Vector, res::KnnResult, queue::Vector)
         if sat.children[c] === nothing
             d = evaluate(dist, q, database(sat, c))
             cost += 1
-            push!(res, c, d)
+            push_item!(res, IdWeight(c, d))
         else
             push!(queue, c)
         end
@@ -61,7 +61,7 @@ function pruningsearchtree(sat::Sat, q, p::Integer, res::KnnResult, factor::Floa
         p = pop!(queue)
         dqp = evaluate(dist, q, database(sat, p))
         cost += 1
-        push!(res, p, dqp)
+        push_item!(res, IdWeight(p, dqp))
 
         if length(res) < maxlength(res) || dqp < factor * maximum(res) + sat.cov[p]
             cost += explore_node!(sat, q, sat.children[p], res, queue)
@@ -75,7 +75,7 @@ end
     cost = 1
     dist = distance(sat)
     dqp = evaluate(dist, q, database(sat, p))
-    push!(res, p, dqp)
+    push_item!(res, IdWeight(p, dqp))
 
     if sat.children[p] !== nothing # inner node
         if length(res) < maxlength(res) || dqp < factor * maximum(res) + sat.cov[p]
